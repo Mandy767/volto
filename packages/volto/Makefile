@@ -67,7 +67,10 @@ cypress-install:
 
 .PHONY: build-deps
 build-deps:
-	if [ ! -d $$(pwd)/../registry/dist ]; then (cd ../../ && pnpm build:deps); fi
+	@if [ ! -d $$(pwd)/../registry/dist ] || [ $$(find $$(pwd)/../registry -newer $$(pwd)/../registry/dist -print -quit) ]; then \
+		(cd ../../ && pnpm build:deps); \
+	fi
+
 
 ##### Release (it runs the one inside)
 
@@ -105,7 +108,10 @@ start-test-acceptance-frontend-dev: build-deps ## Start the Core Acceptance Fron
 
 .PHONY: start-test-acceptance-server test-acceptance-server
 start-test-acceptance-server test-acceptance-server: ## Start Test Acceptance Server Main Fixture (docker container)
-	docker run -i --rm -p 55001:55001 $(DOCKER_IMAGE_ACCEPTANCE)
+	# Temporarily not using the official acceptance docker image because we wan to use the latest version of plone.restapi
+	# docker run -i --rm -p 55001:55001 $(DOCKER_IMAGE_ACCEPTANCE)
+	# Uncomment next and comment above to use a custom image with the acceptance server (in case you need to use an specific backend add-on or version)
+	docker run -i --rm -e ZSERVER_HOST=0.0.0.0 -e ZSERVER_PORT=55001 -p 55001:55001 -e ADDONS='$(KGS) $(TESTING_ADDONS)' -e APPLY_PROFILES=plone.app.contenttypes:plone-content,plone.restapi:default,plone.volto:default-homepage -e CONFIGURE_PACKAGES=plone.app.contenttypes,plone.restapi,plone.volto,plone.volto.cors $(DOCKER_IMAGE) ./bin/robot-server plone.app.robotframework.testing.VOLTO_ROBOT_TESTING
 
 .PHONY: start-test-acceptance-frontend
 start-test-acceptance-frontend: build-deps ## Start the Core Acceptance Frontend Fixture
@@ -144,8 +150,8 @@ full-test-acceptance-seamless: ## Runs Seamless Core Full Acceptance Testing in 
 ######### Project Acceptance tests
 
 .PHONY: start-test-acceptance-frontend-project
-start-test-acceptance-frontend-project: build-deps ## Start the Project Acceptance Frontend Fixture
-	(cd ../../my-volto-app && RAZZLE_API_PATH=http://127.0.0.1:55001/plone pnpm build && pnpm start:prod)
+start-test-acceptance-frontend-project: ## Start the Project Acceptance Frontend Fixture
+	(cd ../../my-volto-app && RAZZLE_API_PATH=http://127.0.0.1:55001/plone yarn build && yarn start:prod)
 
 ######### CoreSandbox Acceptance tests
 
